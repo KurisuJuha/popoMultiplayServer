@@ -8,4 +8,8 @@
     <RootNamespace>JuhaKurisu.PopoTools.Multiplay.Server</RootNamespace>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="fleck" Version="1.2.0" />
+  </ItemGroup>
+
 </Project>
