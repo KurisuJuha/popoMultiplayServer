@@ -26,7 +26,7 @@ internal class Program
             socket.OnOpen += () =>
             {
                 sockets[socket.ConnectionInfo.Id] = socket;
-                inputs[socket.ConnectionInfo.Id] = new byte[1];
+                inputs[socket.ConnectionInfo.Id] = new byte[0];
                 Console.WriteLine($"open: {socket.ConnectionInfo.Id}");
             };
             socket.OnClose += () =>
