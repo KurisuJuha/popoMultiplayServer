@@ -27,6 +27,7 @@ internal class Program
                 sockets[socket.ConnectionInfo.Id] = socket;
                 inputs[socket.ConnectionInfo.Id] = new byte[0];
                 Console.WriteLine($"open: {socket.ConnectionInfo.Id}");
+                SendInputsLog(socket);
             };
             socket.OnClose += () =>
             {
@@ -62,6 +63,29 @@ internal class Program
     private void OnBinary(byte[] bytes, IWebSocketConnection socket)
     {
         inputs[socket.ConnectionInfo.Id] = bytes;
+    }
+
+    private void SendInputsLog(IWebSocketConnection socket)
+    {
+        // データを作る
+        List<byte> bytes = new();
+
+        // logの数を送る
+        bytes.AddRange(BitConverter.GetBytes(inputsLogs.Count));
+
+        foreach (var inputs in inputsLogs)
+        {
+            // inputsのデータを作る
+            byte[] inputsBytes = CreateInputsBytes(inputs);
+
+            // inputsbytesの長さをbytesに追加する
+            bytes.AddRange(BitConverter.GetBytes(inputsBytes.Length));
+            // inputsbytesをbytesに追加する
+            bytes.AddRange(inputsBytes);
+        }
+
+        // データを送る
+        socket.Send(new Message(MessageType.InputLog, bytes.ToArray()).ToBytes());
     }
 
     private void SendInputs()
