@@ -55,7 +55,6 @@ internal class Program
 
     private void BroadCast(byte[] bytes)
     {
-        Console.Clear();
         Console.WriteLine(string.Join(",", bytes));
         Console.WriteLine(string.Join("\n", sockets.Keys.Select(k => $"    {k.ToString()}")));
         foreach (var socket in sockets.Values) socket.Send(bytes);
