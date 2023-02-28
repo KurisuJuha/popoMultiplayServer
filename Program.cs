@@ -3,8 +3,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Timers;
 using Fleck;
-
-namespace popoMultiplayServer;
+namespace JuhaKurisu.PopoTools.Multiplay.Server;
 
 internal class Program
 {
@@ -78,6 +77,8 @@ internal class Program
             bytes.AddRange(inputs[id]);
         }
 
-        BroadCast(bytes.ToArray());
+        Message message = new(MessageType.Input, bytes.ToArray());
+
+        BroadCast(message.ToBytes());
     }
 }
