@@ -66,10 +66,20 @@ internal class Program
 
     private void SendInputs()
     {
+        // データを送る
+        BroadCast(new Message(MessageType.Input, CreateInputsBytes(inputs)).ToBytes());
+
+        // 現在のinputsをコピーしてlogの一番上にためておく
+        inputsLogs.Add(new(inputs));
+
+        // 現在のinputsのbytesを全て初期化する
+        foreach (var id in inputs.Keys) inputs[id] = new byte[0];
+    }
+
+    private byte[] CreateInputsBytes(Dictionary<Guid, byte[]> inputs)
+    {
         List<byte> bytes = new List<byte>();
-
         bytes.AddRange(BitConverter.GetBytes(inputs.Count));
-
         foreach (var id in inputs.Keys)
         {
             bytes.AddRange(id.ToByteArray());
@@ -77,8 +87,6 @@ internal class Program
             bytes.AddRange(inputs[id]);
         }
 
-        Message message = new(MessageType.Input, bytes.ToArray());
-
-        BroadCast(message.ToBytes());
+        return bytes.ToArray();
     }
 }
