@@ -1,4 +1,6 @@
 using System.Linq;
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
 namespace JuhaKurisu.PopoTools.Multiplay
@@ -13,6 +15,17 @@ namespace JuhaKurisu.PopoTools.Multiplay
         public Message(MessageType type, byte[] data)
         {
             this._data = new(data);
+        }
+
+        public byte[] ToBytes()
+        {
+            List<byte> ret = new();
+
+            ret.Add((byte)type);
+            ret.AddRange(BitConverter.GetBytes(_data.Count));
+            ret.AddRange(data);
+
+            return ret.ToArray();
         }
     }
 }
