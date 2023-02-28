@@ -9,14 +9,14 @@ internal class Program
 {
     static void Main(string[] args) => new Program();
 
-    WebSocketServer server = new WebSocketServer("ws://0.0.0.0:3000");
+    WebSocketServer server = new("ws://0.0.0.0:3000");
     Dictionary<Guid, IWebSocketConnection> sockets = new();
+    List<Dictionary<Guid, byte[]>> inputsLogs = new();
     Dictionary<Guid, byte[]> inputs = new();
-    Timer timer;
+    Timer timer = new(1000 / 30d);
 
     private Program()
     {
-        timer = new Timer(1000 / 30d);
         timer.Elapsed += (s, e) => SendInputs();
 
         server.Start(socket =>
