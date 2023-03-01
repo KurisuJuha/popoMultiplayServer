@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Timers;
 using Fleck;
 namespace JuhaKurisu.PopoTools.Multiplay.Server;
@@ -10,9 +11,9 @@ internal class Program
     static void Main(string[] args) => new Program();
 
     WebSocketServer server = new("ws://0.0.0.0:3000");
-    Dictionary<Guid, IWebSocketConnection> sockets = new();
-    List<Dictionary<Guid, byte[]>> inputsLogs = new();
-    Dictionary<Guid, byte[]> inputs = new();
+    ConcurrentDictionary<Guid, IWebSocketConnection> sockets = new();
+    ConcurrentBag<ConcurrentDictionary<Guid, byte[]>> inputsLogs = new();
+    ConcurrentDictionary<Guid, byte[]> inputs = new();
     Timer timer = new(1000 / 30d);
 
     private Program()
@@ -31,8 +32,8 @@ internal class Program
             };
             socket.OnClose += () =>
             {
-                sockets.Remove(socket.ConnectionInfo.Id);
-                inputs.Remove(socket.ConnectionInfo.Id);
+                sockets.TryRemove(socket.ConnectionInfo.Id, out var value1);
+                inputs.TryRemove(socket.ConnectionInfo.Id, out var value2);
                 Console.WriteLine($"close: {socket.ConnectionInfo.Id}");
             };
             socket.OnMessage += message =>
@@ -78,7 +79,7 @@ internal class Program
 
         foreach (var inputs in inputsLogs)
         {
-            byte[] inputsBytes = CreateInputsBytes(inputs);
+            byte[] inputsBytes = CreateInputsBytes(new(inputs));
 
             // inputsbytesをbytesに追加する
             bytes.AddRange(BitConverter.GetBytes(inputsBytes.Length));
@@ -98,7 +99,7 @@ internal class Program
     private void SendInputs()
     {
         // データを送る
-        BroadCast(new Message(MessageType.Input, CreateInputsBytes(inputs)).ToBytes());
+        BroadCast(new Message(MessageType.Input, CreateInputsBytes(new(inputs))).ToBytes());
 
         // 現在のinputsをコピーしてlogの一番上にためておく
         inputsLogs.Add(new(inputs));
