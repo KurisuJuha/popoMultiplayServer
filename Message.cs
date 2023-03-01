@@ -14,6 +14,7 @@ namespace JuhaKurisu.PopoTools.Multiplay
 
         public Message(MessageType type, byte[] data)
         {
+            this.type = type;
             this._data = new(data);
         }
 
