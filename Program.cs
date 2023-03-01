@@ -67,6 +67,9 @@ internal class Program
 
     private void SendInputsLog(IWebSocketConnection socket)
     {
+        // 途中でデータを送られることを防ぐため、timerを一旦ストップ
+        timer.Stop();
+
         // データを作る
         List<byte> bytes = new();
 
@@ -88,6 +91,8 @@ internal class Program
         Console.WriteLine(string.Join(",", message.ToBytes()));
         socket.Send(message.ToBytes());
 
+        // timer 再開
+        timer.Start();
     }
 
     private void SendInputs()
