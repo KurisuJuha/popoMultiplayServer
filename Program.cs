@@ -82,8 +82,12 @@ internal class Program
             bytes.AddRange(inputsBytes);
         }
 
+        Message message = new(MessageType.InputLog, bytes.ToArray());
+
         // データを送る
-        socket.Send(new Message(MessageType.InputLog, bytes.ToArray()).ToBytes());
+        Console.WriteLine(string.Join(",", message.ToBytes()));
+        socket.Send(message.ToBytes());
+
     }
 
     private void SendInputs()
