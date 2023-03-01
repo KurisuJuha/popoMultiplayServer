@@ -75,12 +75,10 @@ internal class Program
 
         foreach (var inputs in inputsLogs)
         {
-            // inputsのデータを作る
             byte[] inputsBytes = CreateInputsBytes(inputs);
 
-            // inputsbytesの長さをbytesに追加する
-            bytes.AddRange(BitConverter.GetBytes(inputsBytes.Length));
             // inputsbytesをbytesに追加する
+            bytes.AddRange(BitConverter.GetBytes(inputsBytes.Length));
             bytes.AddRange(inputsBytes);
         }
 
