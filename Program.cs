@@ -1,98 +1,141 @@
 ﻿using System;
 using System.Linq;
-using System.Timers;
 using System.Collections.Generic;
+using JuhaKurisu.PopoTools.ByteSerializer;
+using JuhaKurisu.PopoTools.Multiplay.Extentions;
 using Fleck;
+
 namespace JuhaKurisu.PopoTools.Multiplay.Server;
 
 internal class Program
 {
     static void Main(string[] args) => new Program();
 
-    WebSocketServer server = new("ws://0.0.0.0:3000");
     Dictionary<Guid, IWebSocketConnection> sockets = new();
     List<Dictionary<Guid, byte[]>> inputsLogs = new();
     Dictionary<Guid, byte[]> inputs = new();
-    Timer timer = new(1000 / 30d);
+    SingleThreadWebSocket webSocket = new("ws://0.0.0.0:3000");
 
     private Program()
     {
-        timer.Elapsed += (s, e) => SendInputs();
+        webSocket.Start();
 
-        server.Start(socket =>
+        new MainLoop(60, MainUpdate).Start();
+    }
+
+    private void MainUpdate()
+    {
+        WebSocketUpdate();
+        SendInputs();
+    }
+
+    private void WebSocketUpdate()
+    {
+        CheckOnClose();
+        CheckOnOpen();
+        CheckOnBinary();
+        CheckOnMessage();
+        CheckOnError();
+    }
+
+    private void CheckOnOpen()
+    {
+        while (webSocket.onOpenQueue.TryDequeue(out var socket))
         {
-            socket.OnError += e => Console.WriteLine("error");
-            socket.OnOpen += () =>
-            {
-                sockets[socket.ConnectionInfo.Id] = socket;
-                inputs[socket.ConnectionInfo.Id] = new byte[0];
-                Console.WriteLine($"open: {socket.ConnectionInfo.Id}");
-                SendInputsLog(socket);
-            };
-            socket.OnClose += () =>
-            {
-                sockets.Remove(socket.ConnectionInfo.Id, out var value1);
-                inputs.Remove(socket.ConnectionInfo.Id, out var value2);
-                Console.WriteLine($"close: {socket.ConnectionInfo.Id}");
-            };
-            socket.OnMessage += message =>
-            {
-                sockets[socket.ConnectionInfo.Id] = socket;
-                Console.WriteLine(string.Join("\n", sockets.Keys.Select(k => $"    {k.ToString()}")));
-            };
-            socket.OnBinary += bytes =>
-            {
-                Console.WriteLine($"{socket.ConnectionInfo.Id}: {string.Join(",", bytes)}");
-                sockets[socket.ConnectionInfo.Id] = socket;
-                OnBinary(bytes, socket);
-            };
-        });
+            sockets[socket.ConnectionInfo.Id] = socket;
+            inputs[socket.ConnectionInfo.Id] = new byte[0];
+            Console.WriteLine($"open: {socket.ConnectionInfo.Id}");
+            SendInputsLog(socket);
+        }
+    }
 
-        timer.Start();
+    private void CheckOnClose()
+    {
+        while (webSocket.onCloseQueue.TryDequeue(out var socket))
+        {
+            sockets.Remove(socket.ConnectionInfo.Id, out var value1);
+            inputs.Remove(socket.ConnectionInfo.Id, out var value2);
+            Console.WriteLine($"close: {socket.ConnectionInfo.Id}");
+        }
+    }
 
-        while (true) ;
+    private void CheckOnMessage()
+    {
+        while (webSocket.onMessageQueue.TryDequeue(out var data))
+        {
+            sockets[data.socket.ConnectionInfo.Id] = data.socket;
+            Console.WriteLine(string.Join("\n", sockets.Keys.Select(k => $"    {k.ToString()}")));
+        }
+    }
+
+    private void CheckOnBinary()
+    {
+        while (webSocket.onBinaryQueue.TryDequeue(out var data))
+        {
+            Console.WriteLine($"{data.socket.ConnectionInfo.Id}: {string.Join(",", data.bytes)}");
+            sockets[data.socket.ConnectionInfo.Id] = data.socket;
+            OnBinary(data.bytes, data.socket);
+        }
+    }
+
+    private void CheckOnError()
+    {
+        while (webSocket.onErrorQueue.TryDequeue(out var data))
+        {
+            data.socket.Close();
+            Console.WriteLine(data.exception.Message);
+        }
     }
 
     private void BroadCast(byte[] bytes)
     {
-        Console.WriteLine(string.Join(",", bytes));
-        Console.WriteLine(string.Join("\n", sockets.Keys.Select(k => $"    {k.ToString()}")));
-        foreach (var socket in sockets.Values) socket.Send(bytes);
+        List<Guid> removeSocketIDs = new();
+        foreach (var key in sockets.Keys)
+        {
+            if (sockets[key].IsAvailable) sockets[key].Send(bytes).Wait();
+            else removeSocketIDs.Add(key);
+        }
+
+        foreach (var removeKey in removeSocketIDs)
+            sockets.Remove(removeKey);
     }
 
     private void OnBinary(byte[] bytes, IWebSocketConnection socket)
     {
-        inputs[socket.ConnectionInfo.Id] = bytes;
+        Message message = new DataReader(bytes).ReadMessage();
+
+        switch (message.type)
+        {
+            case MessageType.Input:
+                inputs[socket.ConnectionInfo.Id] = message.data;
+                break;
+            case MessageType.Close:
+                Console.WriteLine("accept close request");
+                Console.WriteLine(string.Join(",", new Message(MessageType.Close, new byte[0]).ToBytes()));
+                sockets.Remove(socket.ConnectionInfo.Id);
+                socket.Close();
+                break;
+        }
     }
 
     private void SendInputsLog(IWebSocketConnection socket)
     {
-        // 途中でデータを送られることを防ぐため、timerを一旦ストップ
-        timer.Stop();
-
         // データを作る
-        List<byte> bytes = new();
+        DataWriter writer = new DataWriter();
 
         // logの数を送る
-        bytes.AddRange(BitConverter.GetBytes(inputsLogs.Count));
+        writer.Append(inputsLogs.Count);
 
         foreach (var inputs in inputsLogs)
         {
-            byte[] inputsBytes = CreateInputsBytes(inputs);
-
             // inputsbytesをbytesに追加する
-            bytes.AddRange(BitConverter.GetBytes(inputsBytes.Length));
-            bytes.AddRange(inputsBytes);
+            writer.AppendWithLength(CreateInputsBytes(inputs));
         }
 
-        Message message = new(MessageType.InputLog, bytes.ToArray());
+        Message message = new(MessageType.InputLog, writer.bytes.ToArray());
 
         // データを送る
-        Console.WriteLine(string.Join(",", message.ToBytes()));
         socket.Send(message.ToBytes());
-
-        // timer 再開
-        timer.Start();
     }
 
     private void SendInputs()
@@ -109,15 +152,14 @@ internal class Program
 
     private byte[] CreateInputsBytes(Dictionary<Guid, byte[]> inputs)
     {
-        List<byte> bytes = new List<byte>();
-        bytes.AddRange(BitConverter.GetBytes(inputs.Count));
+        DataWriter writer = new DataWriter();
+        writer.Append(inputs.Count);
         foreach (var id in inputs.Keys)
         {
-            bytes.AddRange(id.ToByteArray());
-            bytes.AddRange(BitConverter.GetBytes(inputs[id].Length));
-            bytes.AddRange(inputs[id]);
+            writer.Append(id);
+            writer.AppendWithLength(inputs[id]);
         }
 
-        return bytes.ToArray();
+        return writer.bytes.ToArray();
     }
 }
