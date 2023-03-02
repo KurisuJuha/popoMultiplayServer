@@ -11,10 +11,10 @@ internal class Program
 {
     static void Main(string[] args) => new Program();
 
-    Dictionary<Guid, IWebSocketConnection> sockets = new();
-    List<Dictionary<Guid, byte[]>> inputsLogs = new();
-    Dictionary<Guid, byte[]> inputs = new();
-    SingleThreadWebSocket webSocket = new("ws://0.0.0.0:3000");
+    private Dictionary<Guid, IWebSocketConnection> sockets = new();
+    private List<Dictionary<Guid, byte[]>> inputsLogs = new();
+    private Dictionary<Guid, byte[]> inputs = new();
+    private SingleThreadWebSocket webSocket = new("ws://0.0.0.0:3000");
 
     private Program()
     {
