@@ -10,6 +10,7 @@ public class SingleThreadWebSocket : IDisposable
     public readonly ConcurrentQueue<(byte[] bytes, IWebSocketConnection socket)> onBinaryQueue = new();
     public readonly ConcurrentQueue<(string message, IWebSocketConnection socket)> onMessageQueue = new();
     public readonly ConcurrentQueue<IWebSocketConnection> onCloseQueue = new();
+    public readonly ConcurrentQueue<(Exception exception, IWebSocketConnection socket)> onErrorQueue = new();
     public readonly string location;
     private readonly WebSocketServer server;
 
@@ -32,6 +33,7 @@ public class SingleThreadWebSocket : IDisposable
             socket.OnBinary += bytes => onBinaryQueue.Enqueue((bytes, socket));
             socket.OnMessage += message => onMessageQueue.Enqueue((message, socket));
             socket.OnClose += () => onCloseQueue.Enqueue(socket);
+            socket.OnError += e => onErrorQueue.Enqueue((e, socket));
         });
     }
 }
