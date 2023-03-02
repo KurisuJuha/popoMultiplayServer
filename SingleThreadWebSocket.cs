@@ -8,7 +8,7 @@ public class SingleThreadWebSocket : IDisposable
 {
     public readonly ConcurrentQueue<IWebSocketConnection> onOpenQueue = new();
     public readonly ConcurrentQueue<(byte[] bytes, IWebSocketConnection socket)> onBinaryQueue = new();
-    public readonly ConcurrentQueue<(string, IWebSocketConnection socket)> onMessageQueue = new();
+    public readonly ConcurrentQueue<(string message, IWebSocketConnection socket)> onMessageQueue = new();
     public readonly ConcurrentQueue<IWebSocketConnection> onCloseQueue = new();
     public readonly string location;
     private readonly WebSocketServer server;
