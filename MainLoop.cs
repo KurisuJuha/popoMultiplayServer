@@ -22,7 +22,7 @@ public class MainLoop
             DateTime frameStartTime = DateTime.Now;
             action.Invoke();
             // フレーム終了時間まで待機
-            while (sleepSpan - (DateTime.Now.Microsecond - frameStartTime.Millisecond) > 0) { }
+            while (sleepSpan > (DateTime.Now - frameStartTime).TotalMilliseconds) { }
         }
     }
 }
