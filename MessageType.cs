@@ -4,5 +4,6 @@ namespace JuhaKurisu.PopoTools.Multiplay
     {
         Input,
         InputLog,
+        Close,
     }
 }
