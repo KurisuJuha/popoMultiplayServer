@@ -21,7 +21,7 @@ internal class Program
     {
         webSocket.Start();
 
-        new MainLoop(30, MainUpdate).Start();
+        new MainLoop(60, MainUpdate).Start();
     }
 
     private void MainUpdate()
