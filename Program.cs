@@ -15,6 +15,7 @@ internal class Program
     private List<Dictionary<Guid, byte[]>> inputsLogs = new();
     private Dictionary<Guid, byte[]> inputs = new();
     private SingleThreadWebSocket webSocket = new("ws://0.0.0.0:3000");
+    private Guid hostPlayerID;
 
     private Program()
     {
@@ -27,6 +28,7 @@ internal class Program
     {
         WebSocketUpdate();
         SendInputs();
+        Console.WriteLine(hostPlayerID);
     }
 
     private void WebSocketUpdate()
@@ -42,6 +44,9 @@ internal class Program
     {
         while (webSocket.onOpenQueue.TryDequeue(out var socket))
         {
+            // hostが空ならセット
+            if (!sockets.ContainsKey(hostPlayerID)) hostPlayerID = socket.ConnectionInfo.Id;
+
             sockets[socket.ConnectionInfo.Id] = socket;
             inputs[socket.ConnectionInfo.Id] = new byte[0];
             Console.WriteLine($"open: {socket.ConnectionInfo.Id}");
@@ -55,6 +60,14 @@ internal class Program
         {
             sockets.Remove(socket.ConnectionInfo.Id, out var value1);
             inputs.Remove(socket.ConnectionInfo.Id, out var value2);
+
+            // hostが自分なら新しいhostを選ぶ
+            if (hostPlayerID == socket.ConnectionInfo.Id)
+            {
+                if (sockets.Count == 0) hostPlayerID = Guid.Empty;
+                else hostPlayerID = sockets.Keys.First();
+            }
+
             Console.WriteLine($"close: {socket.ConnectionInfo.Id}");
         }
     }
